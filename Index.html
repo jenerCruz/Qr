@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Generador de QR para Registro</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #qrcode { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>Generador de QR para Registro de Asistencia</h2>
+
+  <label for="puntoInput">Nombre del punto:</label>
+  <input type="text" id="puntoInput" placeholder="Ejemplo: EntradaPrincipal" />
+  <button onclick="generarQR()">Generar QR</button>
+
+  <div id="qrcode"></div>
+
+  <script>
+    const baseUrl = "https://script.google.com/macros/s/AKfycbw1QikJ5pH5NjlpMv4_YXpQ_6fP64QjL2gEaTszO_hWQ8tqskmHoGdMjjXdAISEavGHMg/exec";
+
+    function generarQR() {
+      const punto = document.getElementById("puntoInput").value.trim();
+      if (!punto) {
+        alert("Por favor ingresa un nombre para el punto.");
+        return;
+      }
+      const urlCompleta = baseUrl + "?punto=" + encodeURIComponent(punto);
+      document.getElementById("qrcode").innerHTML = "";
+      QRCode.toCanvas(urlCompleta, { width: 250 }, function (error, canvas) {
+        if (error) {
+          alert("Error generando QR: " + error);
+          return;
+        }
+        document.getElementById("qrcode").appendChild(canvas);
+      });
+    }
+  </script>
+</body>
+</html>
