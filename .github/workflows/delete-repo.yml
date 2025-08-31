@@ -1,0 +1,22 @@
+name: Eliminar Repositorio
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Nombre del repositorio a eliminar (ejemplo: usuario/repo)'
+        required: true
+
+jobs:
+  delete-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Eliminar repositorio
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_WITH_DELETE_PERMISSION }}
+        run: |
+          REPO_NAME="${{ github.event.inputs.repo_name }}"
+          curl -X DELETE \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$REPO_NAME"
