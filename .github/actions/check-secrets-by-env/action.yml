@@ -1,0 +1,46 @@
+name: 'Check Secrets by Environment'
+description: 'Valida que los secrets estén configurados según el entorno (dev/staging/prod).'
+
+inputs:
+  environment:
+    description: 'Entorno actual (dev, staging, prod).'
+    required: true
+  secrets_dev:
+    description: 'Secrets requeridos para el entorno de desarrollo.'
+    required: false
+  secrets_staging:
+    description: 'Secrets requeridos para el entorno de staging.'
+    required: false
+  secrets_prod:
+    description: 'Secrets requeridos para el entorno de producción.'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validar secrets según entorno
+      shell: bash
+      run: |
+        case "${{ inputs.environment }}" in
+          "dev")
+            IFS=',' read -ra SECRETS <<< "${{ inputs.secrets_dev }}"
+            ;;
+          "staging")
+            IFS=',' read -ra SECRETS <<< "${{ inputs.secrets_staging }}"
+            ;;
+          "prod")
+            IFS=',' read -ra SECRETS <<< "${{ inputs.secrets_prod }}"
+            ;;
+          *)
+            echo "::warning::Entorno '${{ inputs.environment }}' no reconocido."
+            exit 0
+            ;;
+        esac
+
+        for secret in "${SECRETS[@]}"; do
+          if [ -z "${{ secrets[format('{0}', secret)] }}" ]; then
+            echo "::warning::El secret '$secret' no está configurado para el entorno '${{ inputs.environment }}'."
+          else
+            echo "✅ El secret '$secret' está configurado para '${{ inputs.environment }}'."
+          fi
+        done
