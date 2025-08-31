@@ -1,0 +1,27 @@
+name: Validar Workflow Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      ruta_archivo:
+        description: 'Ruta del archivo YAML a validar (ej: workflows/deploy.yml)'
+        required: true
+        default: 'workflows/deploy.yml'
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v3
+
+      - name: Validar sintaxis YAML del archivo
+        run: |
+          echo "Validando archivo: ${{ github.event.inputs.ruta_archivo }}"
+          yamllint "${{ github.event.inputs.ruta_archivo }}"
+
+      - name: Validar estructura básica de workflow
+        run: |
+          grep -q 'name:' "${{ github.event.inputs.ruta_archivo }}" || echo "⚠️ Falta campo 'name'"
+          grep -q 'on:' "${{ github.event.inputs.ruta_archivo }}" || echo "⚠️ Falta campo 'on'"
+          grep -q 'jobs:' "${{ github.event.inputs.ruta_archivo }}" || echo "⚠️ Falta campo 'jobs'"
