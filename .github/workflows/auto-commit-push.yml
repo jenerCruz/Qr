@@ -1,0 +1,41 @@
+name: Detectar Cambios y Hacer Push
+
+on:
+  workflow_dispatch:  # Para ejecutar manualmente
+  push:                 # Opcional: Ejecutar al hacer push a una rama específica
+    branches: [ main ]
+
+jobs:
+  detect-changes-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Clona todo el historial para detectar cambios
+
+      - name: Detectar cambios y hacer commit/push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Token automático de GitHub Actions
+        run: |
+          # Configurar git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Detectar cambios en el repositorio
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Se detectaron cambios locales. Preparando commit y push..."
+
+            # Añadir todos los cambios
+            git add .
+
+            # Hacer commit con un mensaje descriptivo
+            git commit -m "Auto-commit: Actualización de archivos [$(date +'%Y-%m-%d %H:%M:%S')]"
+
+            # Hacer push a la rama actual
+            git push origin HEAD:${{ github.ref_name }}
+
+            echo "Cambios subidos correctamente."
+          else
+            echo "No se detectaron cambios locales. No se realizó ningún commit."
+          fi
