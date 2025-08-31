@@ -1,0 +1,28 @@
+name: n8n - Instalar Dependencias
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'package.json'
+      - '.n8n/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'package.json'
+      - '.n8n/**'
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias de n8n
+        run: npm install
