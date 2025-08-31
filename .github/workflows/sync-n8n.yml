@@ -1,0 +1,53 @@
+name: 🔄 Sync n8n Workflows
+
+on:
+  workflow_dispatch: # ejecución manual
+    inputs:
+      action:
+        description: "Acción a ejecutar"
+        required: true
+        default: "export"
+        type: choice
+        options:
+          - export
+          - import
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-n8n:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 📦 Instalar CLI de n8n
+        run: |
+          npm install -g n8n
+
+      - name: 🔐 Verificar Secrets
+        run: |
+          if [ -z "${{ secrets.N8N_URL }}" ] || [ -z "${{ secrets.N8N_API_KEY }}" ]; then
+            echo "⚠️ No se encontraron secrets N8N_URL o N8N_API_KEY, se omite el sync."
+            exit 0
+          fi
+
+      - name: 🚀 Ejecutar acción seleccionada
+        run: |
+          if [ "${{ github.event.inputs.action }}" = "export" ]; then
+            echo "📤 Exportando workflows desde n8n..."
+            mkdir -p workflows
+            n8n export:workflow --all --output=./workflows/
+          elif [ "${{ github.event.inputs.action }}" = "import" ]; then
+            echo "📥 Importando workflows a n8n..."
+            n8n import:workflow --input=./workflows/
+          else
+            echo "⚠️ Acción no reconocida, finalizando sin error."
+          fi
