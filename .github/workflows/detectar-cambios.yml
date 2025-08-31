@@ -1,0 +1,61 @@
+name: Detectar Cambios y Hacer Push (con Diálogo)
+
+on:
+  workflow_dispatch:  # Para ejecutar manualmente
+  push:               # Opcional: Ejecutar al hacer push a una rama específica
+    branches: [ main ]
+
+jobs:
+  detect-changes-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Clona todo el historial para detectar cambios
+
+      - name: Detectar cambios y hacer commit/push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 **Iniciando revisión de cambios en el repositorio...**"
+
+          # Configurar git
+          echo "🛠 Configurando git con las credenciales de GitHub Actions..."
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          echo "✅ Git configurado correctamente."
+
+          # Detectar cambios en el repositorio
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "📋 **Se detectaron cambios locales en los siguientes archivos:**"
+            git status --porcelain
+            echo ""
+
+            echo "📂 Añadiendo todos los cambios al área de staging..."
+            git add .
+            echo "✅ Todos los cambios fueron añadidos."
+
+            echo "📝 Preparando commit con los cambios detectados..."
+            git commit -m "🤖 Auto-commit: Actualización de archivos [$(date +'%Y-%m-%d %H:%M:%S')]"
+            echo "✅ Commit creado con éxito."
+
+            echo "📤 Subiendo los cambios a la rama '${{ github.ref_name }}'..."
+            git push origin HEAD:${{ github.ref_name }}
+            echo "✅ Cambios subidos correctamente a la rama '${{ github.ref_name }}'."
+
+            echo "---
+            🎉 **Proceso completado con éxito.**
+            📌 **Resumen:**
+            - Se detectaron cambios locales.
+            - Se añadieron los cambios al área de staging.
+            - Se creó un commit automático.
+            - Se subieron los cambios al repositorio remoto.
+            ---"
+          else
+            echo "🔍 **No se detectaron cambios locales en el repositorio.**
+            📌 **Resumen:**
+            - No hay archivos modificados, nuevos o eliminados.
+            - No se realizó ningún commit ni push.
+            ---"
+          fi
