@@ -1,0 +1,34 @@
+name: n8n - Construir y Desplegar
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'package.json'
+      - '.n8n/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Construir n8n
+        run: npm run build
+
+      - name: Desplegar a producción
+        run: |
+          docker build -t n8n-image .
+          docker push n8n-image:latest
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
