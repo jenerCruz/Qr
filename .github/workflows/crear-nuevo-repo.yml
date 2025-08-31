@@ -1,0 +1,83 @@
+name: Crear Nuevo Repositorio
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Nombre del nuevo repositorio (ejemplo: mi-nuevo-repo)'
+        required: true
+      branch_name:
+        description: 'Nombre de la rama principal (ejemplo: main, develop)'
+        required: true
+        default: 'main'
+      init_files:
+        description: '¿Incluir archivos iniciales? (README, .gitignore, LICENSE)'
+        type: choice
+        options:
+          - 'sí'
+          - 'no'
+        default: 'sí'
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crear repositorio
+        id: create
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSION }}
+          GITHUB_USER: "jenerCruz" # ← Reemplaza con el usuario dueño del token
+        run: |
+          REPO_NAME="${{ github.event.inputs.repo_name }}"
+          BRANCH_NAME="${{ github.event.inputs.branch_name }}"
+          INIT_FILES="${{ github.event.inputs.init_files }}"
+
+          # Convertir 'sí'/'no' a booleano para auto_init
+          AUTO_INIT=false
+          if [ "$INIT_FILES" = "sí" ]; then
+            AUTO_INIT=true
+          fi
+
+          # Crear el repositorio
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/user/repos \
+            -d "{\"name\":\"$REPO_NAME\", \"private\":false, \"auto_init\":$AUTO_INIT}")
+
+          REPO_URL=$(echo "$RESPONSE" | jq -r '.html_url')
+          if [ "$REPO_URL" = "null" ] || [ -z "$REPO_URL" ]; then
+            echo "❌ Error: No se pudo crear el repositorio"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          echo "repo_url=$REPO_URL" >> $GITHUB_OUTPUT
+
+          # Esperar a que el repo esté disponible
+          for i in {1..5}; do
+            git ls-remote "https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git" && break
+            echo "⏳ Esperando que el repositorio esté disponible..."
+            sleep 2
+          done || exit 1
+
+          # Si se eligieron archivos iniciales, clonar y personalizar
+          if [ "$INIT_FILES" = "sí" ]; then
+            git clone "https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git"
+            cd "$REPO_NAME"
+            git checkout -b "$BRANCH_NAME"
+            echo "# $REPO_NAME" > README.md
+            echo "*.log" > .gitignore
+            echo "MIT License" > LICENSE
+            git add .
+            git config --global user.email "pamecoaxaca.telcel@gmail.com"  # ← Reemplaza con tu email
+            git config --global user.name "jenerCruz"              # ← Reemplaza con tu nombre
+            git commit -m "Añadir archivos iniciales"
+            git push origin "$BRANCH_NAME"
+
+            # Eliminar rama main si existe
+            git ls-remote --exit-code origin main && git push origin --delete main || true
+          fi
+
+      - name: Mostrar resultado
+        run: |
+          echo "✅ Repositorio creado: ${{ steps.create.outputs.repo_url }}"
