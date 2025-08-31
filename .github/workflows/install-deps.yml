@@ -1,0 +1,39 @@
+name: Instalar Dependencias
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias según el proyecto
+        run: |
+          if [ -f "package.json" ]; then
+            echo "📦 Proyecto Node.js detectado. Instalando dependencias con npm..."
+            npm install
+          elif [ -f "requirements.txt" ]; then
+            echo "🐍 Proyecto Python detectado. Instalando dependencias con pip..."
+            pip install -r requirements.txt
+          elif [ -f "pom.xml" ]; then
+            echo "☕ Proyecto Java (Maven) detectado. Instalando dependencias con Maven..."
+            mvn install
+          elif [ -f "build.gradle" ]; then
+            echo "📜 Proyecto Java (Gradle) detectado. Instalando dependencias con Gradle..."
+            chmod +x gradlew
+            ./gradlew build
+          elif [ -f "Gemfile" ]; then
+            echo "💎 Proyecto Ruby detectado. Instalando dependencias con Bundler..."
+            bundle install
+          elif [ -f "go.mod" ]; then
+            echo "🐹 Proyecto Go detectado. Instalando dependencias con Go Modules..."
+            go mod download
+          else
+            echo "⚠️ No se detectó un archivo de dependencias conocido."
+          fi
