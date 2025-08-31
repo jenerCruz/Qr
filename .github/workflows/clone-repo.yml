@@ -1,0 +1,55 @@
+name: Clonar Repositorio Personalizado
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: 'URL del repositorio (ej: https://github.com/usuario/repo.git o git@github.com:usuario/repo.git)'
+        required: true
+      branch:
+        description: 'Rama a clonar (ej: main, develop)'
+        required: true
+        default: 'main'
+      auth_method:
+        description: 'Método de autenticación'
+        type: choice
+        options:
+          - 'token'
+          - 'ssh'
+        default: 'token'
+      github_token:
+        description: 'Token de GitHub (solo si eliges autenticación por token)'
+        required: false
+      ssh_private_key:
+        description: 'Clave privada SSH (solo si eliges autenticación por SSH)'
+        required: false
+
+jobs:
+  clone-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar autenticación y clonar
+        run: |
+          REPO_URL="${{ github.event.inputs.repo_url }}"
+          BRANCH="${{ github.event.inputs.branch }}"
+          AUTH_METHOD="${{ github.event.inputs.auth_method }}"
+
+          if [ "$AUTH_METHOD" = "token" ]; then
+            # Reemplazar https:// con https://<token>@
+            if [[ "$REPO_URL" == https* ]]; then
+              TOKEN="${{ github.event.inputs.github_token }}"
+              REPO_URL_WITH_AUTH=${REPO_URL/https:\/\//https://$TOKEN@}
+            fi
+            git clone -b "$BRANCH" "$REPO_URL_WITH_AUTH"
+          elif [ "$AUTH_METHOD" = "ssh" ]; then
+            # Configurar clave SSH
+            mkdir -p ~/.ssh
+            echo "${{ github.event.inputs.ssh_private_key }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            git clone -b "$BRANCH" "$REPO_URL"
+          fi
+
+      - name: Mostrar estructura clonada
+        run: |
+          ls -la
