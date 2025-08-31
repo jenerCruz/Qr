@@ -1,0 +1,22 @@
+name: 'Check Secrets Exist'
+description: 'Valida que los secrets necesarios existan (solo recordatorio, no bloquea el workflow).'
+
+inputs:
+  secrets:
+    description: 'Lista de secrets a validar, separados por coma.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validar secrets
+      shell: bash
+      run: |
+        IFS=',' read -ra SECRETS <<< "${{ inputs.secrets }}"
+        for secret in "${SECRETS[@]}"; do
+          if [ -z "${{ secrets[format('{0}', secret)] }}" ]; then
+            echo "::warning::El secret '$secret' no está configurado en este repositorio."
+          else
+            echo "✅ El secret '$secret' está configurado."
+          fi
+        done
