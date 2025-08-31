@@ -1,0 +1,65 @@
+name: Detectar Variables Sensibles
+
+on:
+  workflow_dispatch:  # Para ejecutar manualmente
+  push:               # Opcional: Ejecutar al hacer push a una rama
+    branches: [ main ]
+
+jobs:
+  detect-sensitive-vars:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Buscar variables sensibles
+        id: detect
+        run: |
+          # Lista de patrones comunes de variables sensibles
+          PATTERNS=(
+            "API_KEY"
+            "SECRET_KEY"
+            "PASSWORD"
+            "TOKEN"
+            "PRIVATE_KEY"
+            "AWS_SECRET"
+            "DB_PASSWORD"
+            "SSH_KEY"
+            "ACCESS_KEY"
+            "CLIENT_SECRET"
+          )
+
+          # Archivos a revisar (extensiones comunes)
+          FILES=$(find . -type f \( -name "*.env" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.js" -o -name "*.py" \))
+
+          # Variable para almacenar resultados
+          SENSITIVE_VARS=""
+
+          # Buscar patrones en los archivos
+          for pattern in "${PATTERNS[@]}"; do
+            for file in $FILES; do
+              if grep -q -i "$pattern" "$file"; then
+                SENSITIVE_VARS+="$(grep -i "$pattern" "$file" | sed "s/^/[$file] /")"$'\n'
+              fi
+            done
+          done
+
+          # Si se encontraron variables sensibles
+          if [ -n "$SENSITIVE_VARS" ]; then
+            echo "::warning::Se detectaron variables sensibles en el repositorio:"
+            echo "$SENSITIVE_VARS"
+            echo "SENSITIVE_VARS_DETECTED=true" >> $GITHUB_OUTPUT
+          else
+            echo "No se detectaron variables sensibles."
+            echo "SENSITIVE_VARS_DETECTED=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Recomendar guardar como secretos
+        if: steps.detect.outputs.SENSITIVE_VARS_DETECTED == 'true'
+        run: |
+          echo "🔴 **¡Advertencia!** Se detectaron variables sensibles en el repositorio."
+          echo "🔐 **Recomendación:** Guarda estas variables como secretos en GitHub:"
+          echo "   - Ve a **Settings > Secrets > Actions**."
+          echo "   - Crea un nuevo secreto para cada variable sensible."
+          echo "   - Usa el nombre de la variable como el nombre del secreto."
+          echo "   - Reemplaza la variable en el código por \`\${{ secrets.NOMBRE_DEL_SECRETO }}\`."
