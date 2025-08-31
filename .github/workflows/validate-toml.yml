@@ -1,0 +1,53 @@
+name: Validar Estructura de Archivo TOML
+
+on:
+  workflow_dispatch:
+    inputs:
+      toml_file:
+        description: "Nombre del archivo TOML a validar (ej: pyproject.toml)"
+        required: true
+        default: "pyproject.toml"
+      required_keys:
+        description: "Claves obligatorias separadas por comas (ej: project,tool,build-system)"
+        required: true
+        default: "project,tool,build-system"
+
+jobs:
+  validate-toml:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar archivo TOML
+        id: validate
+        run: |
+          TOML_FILE="${{ github.event.inputs.toml_file }}"
+          REQUIRED_KEYS="${{ github.event.inputs.required_keys }}"
+
+          echo "🔍 Validando el archivo TOML: \`$TOML_FILE\`"
+          echo "🔑 Claves obligatorias: \`$REQUIRED_KEYS\`"
+
+          # Verificar si el archivo existe
+          if [ ! -f "\$TOML_FILE" ]; then
+            echo "⚠ **Advertencia:** El archivo \`$TOML_FILE\` no existe."
+            echo "VALIDATION_STATUS=skipped" >> \$GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Instalar dependencias para parsear TOML
+          pip install tomli
+
+          # Validar estructura del TOML
+          python3 - <<EOF
+          import tomli
+          import sys
+          import os
+
+          toml_file = os.environ["TOML_FILE"]
+          required_keys = os.environ["REQUIRED_KEYS"].split(",")
+
+          try:
+              with open(toml_file, "rb") as f:
+                  data = tomli.load(f)
+
