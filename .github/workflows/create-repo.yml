@@ -26,7 +26,7 @@ jobs:
         id: create
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_WITH_REPO_PERMISSION }}
-          GITHUB_USER: jenerCruz # ← Reemplaza con el usuario dueño del token
+          GITHUB_USER:jenerCruz # ← Reemplaza con el usuario dueño del token
         run: |
           REPO_NAME="${{ github.event.inputs.repo_name }}"
           BRANCH_NAME="${{ github.event.inputs.branch_name }}"
@@ -46,11 +46,19 @@ jobs:
             -d "{\"name\":\"$REPO_NAME\", \"private\":false, \"auto_init\":$AUTO_INIT}")
 
           REPO_URL=$(echo "$RESPONSE" | jq -r '.html_url')
+          if [ "$REPO_URL" = "null" ] || [ -z "$REPO_URL" ]; then
+            echo "❌ Error: No se pudo crear el repositorio"
+            echo "$RESPONSE"
+            exit 1
+          fi
           echo "repo_url=$REPO_URL" >> $GITHUB_OUTPUT
 
           # Esperar a que el repo esté disponible
-          sleep 2
-          git ls-remote "https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git" || exit 1
+          for i in {1..5}; do
+            git ls-remote "https://$GITHUB_USER:$GITHUB_TOKEN@github.com/$GITHUB_USER/$REPO_NAME.git" && break
+            echo "⏳ Esperando que el repositorio esté disponible..."
+            sleep 2
+          done || exit 1
 
           # Si se eligieron archivos iniciales, clonar y personalizar
           if [ "$INIT_FILES" = "sí" ]; then
@@ -72,4 +80,4 @@ jobs:
 
       - name: Mostrar resultado
         run: |
-          echo "Repositorio creado: ${{ steps.create.outputs.repo_url }}"
+          echo "✅ Repositorio creado: ${{ steps.create.outputs.repo_url }}"
