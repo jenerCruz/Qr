@@ -1,0 +1,51 @@
+name: Manual Action con Validación de Invertido
+
+on:
+  workflow_dispatch:
+    inputs:
+      invertido:
+        description: 'Selecciona el invertido para la acción'
+        required: true
+        type: choice
+        options:
+          - Act25086
+          - Act12505
+          - Act651333
+      archivo:
+        description: 'Nombre del archivo a subir (ejemplo: solicitud.txt)'
+        required: true
+        type: string
+
+jobs:
+  validar_y_subir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar invertido
+        run: |
+          echo "Invertido seleccionado: ${{ github.event.inputs.invertido }}"
+          if [[ "${{ github.event.inputs.invertido }}" =~ ^(Act25086|Act12505|Act651333)$ ]]; then
+            echo "Invertido válido."
+          else
+            echo "Invertido no válido. La acción se cancelará."
+            exit 1
+          fi
+
+      - name: Solicitar subida de archivo
+        run: |
+          echo "Por favor, sube el archivo '${{ github.event.inputs.archivo }}' a la rama main."
+          echo "Puedes hacerlo manualmente o configurar un paso adicional para automatizarlo."
+
+      - name: Crear archivo de ejemplo (simulación)
+        run: |
+          echo "Este es un archivo de ejemplo para ${{ github.event.inputs.invertido }}" > ${{ github.event.inputs.archivo }}
+
+      - name: Commit y push del archivo
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add ${{ github.event.inputs.archivo }}
+          git commit -m "Solicitud de commit para invertido ${{ github.event.inputs.invertido }}"
+          git push
