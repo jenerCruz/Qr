@@ -1,0 +1,61 @@
+name: Procesar Invertido y Archivo
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  procesar:
+    if: contains(github.event.issue.body, '/run-action')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extraer invertido del issue
+        id: extract
+        run: |
+          BODY="${{ github.event.issue.body }}"
+          if [[ $BODY =~ /run-action[[:space:]]+invertido=([A-Za-z0-9]+) ]]; then
+            INVERTIDO="${BASH_REMATCH[1]}"
+            echo "invertido=$INVERTIDO" >> $GITHUB_OUTPUT
+          else
+            echo "Formato incorrecto. Usa: /run-action invertido=<código>"
+            exit 1
+          fi
+
+      - name: Validar invertido
+        run: |
+          INVERTIDO="${{ steps.extract.outputs.invertido }}"
+          if [[ "$INVERTIDO" =~ ^(Act25086|Act12505|Act651333)$ ]]; then
+            echo "Invertido válido: $INVERTIDO"
+          else
+            echo "Invertido no válido: $INVERTIDO"
+            exit 1
+          fi
+
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Descargar archivo adjunto del issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: attachments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const attachment = attachments.data.find(c => c.body.includes('Archivo adjunto:'));
+            if (!attachment) {
+              throw new Error("No se encontró archivo adjunto en el issue.");
+            }
+            // Aquí deberías procesar el archivo adjunto.
+            // GitHub Actions no descarga automáticamente adjuntos de issues.
+            // Necesitarías un paso adicional o una integración externa.
+
+      - name: Simular commit del archivo
+        run: |
+          echo "Archivo procesado para ${{ steps.extract.outputs.invertido }}" > solicitud_${{ steps.extract.outputs.invertido }}.txt
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add solicitud_${{ steps.extract.outputs.invertido }}.txt
+          git commit -m "Procesado: ${{ steps.extract.outputs.invertido }}"
+          git push
